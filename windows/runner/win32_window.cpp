@@ -50,18 +50,36 @@ class WindowClassRegistrar {
     return instance_;
   }
 
+  void EnableNonClientDpiScaling(HWND hwnd) {
+    auto enable_non_client_dpi_scaling =
+        reinterpret_cast<EnableNonClientDpiScaling*>(
+            GetProcAddress(user32_module_, "EnableNonClientDpiScaling"));
+    if (enable_non_client_dpi_scaling != nullptr) {
+      enable_non_client_dpi_scaling(hwnd);
+    }
+  }
+
   // Returns the name of the window class, registering the class if it hasn't
   // previously been registered.
   const wchar_t* GetWindowClass();
 
-  // Unregisters the window class. Should only be called if there are no
-  // instances of the window.
+  // Unregisters the window class.
   void UnregisterWindowClass();
 
  private:
-  WindowClassRegistrar() = default;
+  WindowClassRegistrar() {
+    user32_module_ = LoadLibraryA("User32.dll");
+  }
+
+  ~WindowClassRegistrar() {
+    if (user32_module_) {
+      FreeLibrary(user32_module_);
+    }
+  }
 
   static WindowClassRegistrar* instance_;
+
+  HMODULE user32_module_ = nullptr;
 
   bool class_registered_ = false;
 };
@@ -80,7 +98,6 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
     window_class.hbrBackground = 0;
-    window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);
     class_registered_ = true;
@@ -162,6 +179,17 @@ Win32Window::MessageHandler(HWND hwnd,
         PostQuitMessage(0);
       }
       return 0;
+
+    case WM_GETMINMAXINFO: {
+      auto info = reinterpret_cast<MINMAXINFO*>(lparam);
+      POINT target_point = {0, 0};
+      HMONITOR monitor = MonitorFromPoint(target_point, MONITOR_DEFAULTTONEAREST);
+      UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
+      double scale_factor = dpi / 96.0;
+      info->ptMinTrackSize.x = Scale(1240, scale_factor);
+      info->ptMinTrackSize.y = Scale(760, scale_factor);
+      return 0;
+    }
 
     case WM_DPICHANGED: {
       auto newRectSize = reinterpret_cast<RECT*>(lparam);

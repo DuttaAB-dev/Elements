@@ -55,4 +55,39 @@ void main() {
     expect(find.text('Elements'), findsOneWidget);
     expect(find.text('H'), findsOneWidget);
   });
+
+  testWidgets('Elements table is centered and scales on desktop viewports',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    const mockRepo = MockElementRepository([sampleElement]);
+
+    await tester.pumpWidget(
+      const ElementsApp.withRepository(repository: mockRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Elements'), findsOneWidget);
+    expect(find.byType(FittedBox), findsOneWidget);
+    expect(find.byType(Center), findsWidgets);
+  });
+
+  testWidgets('Elements table handles small/mobile viewports with scrolling',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    const mockRepo = MockElementRepository([sampleElement]);
+
+    await tester.pumpWidget(
+      const ElementsApp.withRepository(repository: mockRepo),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Elements'), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+  });
 }

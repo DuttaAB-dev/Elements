@@ -53,7 +53,7 @@ class _TablePageState extends State<TablePage> {
             );
           }
           if (snapshot.hasData) {
-            return _buildTable(snapshot.data!);
+            return _buildTable(context, snapshot.data!);
           }
           return const Center(child: CircularProgressIndicator());
         },
@@ -61,28 +61,71 @@ class _TablePageState extends State<TablePage> {
     );
   }
 
-  Widget _buildTable(List<ElementData?> elements) {
-    const totalHeight = AppConstants.rowCount *
-        (AppConstants.contentSize + (AppConstants.gutterWidth * 2));
+  Widget _buildTable(BuildContext context, List<ElementData?> elements) {
+    const baseWidth = AppConstants.baseTableWidth;
+    const baseHeight = AppConstants.baseTableHeight;
 
-    return SingleChildScrollView(
-      child: SizedBox(
-        height: totalHeight,
-        child: GridView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: elements.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: AppConstants.rowCount,
-          ),
-          itemBuilder: (context, index) {
-            final element = elements[index];
-            if (element != null) {
-              return ElementTile(element);
-            }
-            return const EmptyTile();
-          },
+    final gridWidget = SizedBox(
+      width: baseWidth,
+      height: baseHeight,
+      child: GridView.builder(
+        physics: const ClampingScrollPhysics(),
+        scrollDirection: Axis.horizontal,
+        itemCount: elements.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: AppConstants.rowCount,
         ),
+        itemBuilder: (context, index) {
+          final element = elements[index];
+          if (element != null) {
+            return ElementTile(element);
+          }
+          return const EmptyTile();
+        },
       ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final availableHeight = constraints.maxHeight;
+
+        // If the viewport is at least as large as the base periodic table,
+        // center the table and scale it up to the maximum extent.
+        final fitsInViewport =
+            availableWidth >= baseWidth && availableHeight >= baseHeight;
+
+        if (fitsInViewport) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppConstants.maxTableWidth,
+                maxHeight: AppConstants.maxTableHeight,
+              ),
+              child: AspectRatio(
+                aspectRatio: AppConstants.tableAspectRatio,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  child: gridWidget,
+                ),
+              ),
+            ),
+          );
+        }
+
+        // On smaller screens or compact viewports, ensure content is scrollable
+        // and centered along any axis that fits without clipping or overlap.
+        return Center(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: gridWidget,
+            ),
+          ),
+        );
+      },
     );
   }
 }
