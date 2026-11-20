@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:Elements-App/main.dart';
+import 'package:Elements/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  testWidgets('Elements app smoke test and detail navigation',
+      (WidgetTester tester) async {
+    final sampleElement = ElementData.fromJson({
+      'number': 1,
+      'name': 'Hydrogen',
+      'symbol': 'H',
+      'extract':
+          'Hydrogen is the chemical element with the symbol H and atomic number 1.',
+      'source': 'https://en.wikipedia.org/wiki/Hydrogen',
+      'atomic_weight': '1.008',
+      'category': 'Reactive Nonmetal',
+      'colors': [0xFF536DFE, 0xFF8E99F3],
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final mockGridList = Future.value(<ElementData?>[sampleElement, null]);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpWidget(ElementsApp(mockGridList));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Elements'), findsOneWidget);
+    expect(find.text('H'), findsOneWidget);
+    expect(find.text('Hydrogen'), findsOneWidget);
+
+    await tester.tap(find.text('H'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('REACTIVE NONMETAL'), findsOneWidget);
+    expect(find.text('1.008'), findsOneWidget);
+    expect(find.text('Atomic Weight'), findsOneWidget);
   });
 }
